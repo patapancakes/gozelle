@@ -33,7 +33,7 @@ const (
 	Encrypted
 )
 
-type Index map[uint64]File
+type Index map[uint64]*File
 
 func ReadIndex(r io.Reader) (Index, error) {
 	index := make(Index)
@@ -60,7 +60,7 @@ func ReadIndex(r io.Reader) (Index, error) {
 			chunks = append(chunks, Chunk{Offset: start, Length: length})
 		}
 
-		index[id] = File{Chunks: chunks, Mode: Mode(mode)}
+		index[id] = &File{Chunks: chunks, Mode: Mode(mode)}
 	}
 
 	return index, nil
