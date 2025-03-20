@@ -28,7 +28,7 @@ import (
 	"io"
 )
 
-type Chunk struct {
+type Block struct {
 	Offset uint64 `json:"offset"`
 	Length uint64 `json:"length"`
 
@@ -36,18 +36,18 @@ type Chunk struct {
 	closer io.Closer
 }
 
-var ErrChunkNotPrepared = errors.New("chunk not prepared")
+var ErrBlockNotPrepared = errors.New("block not prepared")
 
-func (c Chunk) Read(dst []byte) (int, error) {
-	if c.Length == 0 {
+func (b Block) Read(dst []byte) (int, error) {
+	if b.Length == 0 {
 		return 0, io.EOF
 	}
 
-	if c.data == nil {
-		return 0, ErrChunkNotPrepared
+	if b.data == nil {
+		return 0, ErrBlockNotPrepared
 	}
 
-	n, err := c.data.Read(dst)
+	n, err := b.data.Read(dst)
 	if err != nil {
 		return n, err
 	}
@@ -55,34 +55,34 @@ func (c Chunk) Read(dst []byte) (int, error) {
 	return n, nil
 }
 
-func (c Chunk) Close() error {
-	if c.closer == nil {
+func (b Block) Close() error {
+	if b.closer == nil {
 		return nil
 	}
 
-	c.closer.Close()
+	b.closer.Close()
 
 	return nil
 }
 
-func (c *Chunk) Prepare(key []byte, src io.ReaderAt, mode Mode) error {
-	// why do zero-length chunks exist?
-	if c.Length == 0 {
+func (b *Block) Prepare(key []byte, src io.ReaderAt, mode Mode) error {
+	// why do zero-length blocks exist?
+	if b.Length == 0 {
 		return nil
 	}
 
-	chunk := make([]byte, c.Length)
-	_, err := src.ReadAt(chunk, int64(c.Offset))
+	block := make([]byte, b.Length)
+	_, err := src.ReadAt(block, int64(b.Offset))
 	if err != nil {
 		return fmt.Errorf("failed to read data: %s", err)
 	}
 
-	c.data = bytes.NewReader(chunk)
+	b.data = bytes.NewReader(block)
 
 	// zlib buffer sizes if encrypted, not used
 	var encSize, decSize uint32
 	if mode == EncryptedCompressed {
-		err = read(c.data, binary.LittleEndian, &encSize, &decSize)
+		err = read(b.data, binary.LittleEndian, &encSize, &decSize)
 		if err != nil {
 			return fmt.Errorf("failed to read value: %s", err)
 		}
@@ -99,18 +99,18 @@ func (c *Chunk) Prepare(key []byte, src io.ReaderAt, mode Mode) error {
 			return fmt.Errorf("failed to create aes cipher: %s", err)
 		}
 
-		c.data = &cipher.StreamReader{S: cipher.NewCFBDecrypter(block, make([]byte, 0x10)), R: c.data}
+		b.data = &cipher.StreamReader{S: cipher.NewCFBDecrypter(block, make([]byte, 0x10)), R: b.data}
 	}
 
 	// decompress
 	if mode == EncryptedCompressed || mode == Compressed {
-		zr, err := zlib.NewReader(c.data)
+		zr, err := zlib.NewReader(b.data)
 		if err != nil {
 			return fmt.Errorf("failed to create zlib reader: %s", err)
 		}
 
-		c.closer = zr
-		c.data = zr
+		b.closer = zr
+		b.data = zr
 	}
 
 	return nil

@@ -22,36 +22,36 @@ import (
 )
 
 type File struct {
-	Chunks []Chunk `json:"chunks"`
+	Blocks []Block `json:"blocks"`
 	Mode   Mode    `json:"mode"`
 }
 
 func (f *File) Read(dst []byte) (int, error) {
 	var readers []io.Reader
-	for _, c := range f.Chunks {
-		readers = append(readers, c)
+	for _, b := range f.Blocks {
+		readers = append(readers, b)
 	}
 
 	return io.MultiReader(readers...).Read(dst)
 }
 
 func (f *File) Close() error {
-	for _, c := range f.Chunks {
-		err := c.Close()
+	for _, b := range f.Blocks {
+		err := b.Close()
 		if err != nil {
 			return err
 		}
 	}
 
 	// HACK: makes it not leak a ton of memory
-	f.Chunks = nil
+	f.Blocks = nil
 
 	return nil
 }
 
 func (f *File) Prepare(key []byte, src io.ReaderAt) error {
-	for i := range f.Chunks {
-		err := f.Chunks[i].Prepare(key, src, f.Mode)
+	for i := range f.Blocks {
+		err := f.Blocks[i].Prepare(key, src, f.Mode)
 		if err != nil {
 			return err
 		}

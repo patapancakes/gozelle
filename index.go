@@ -49,7 +49,7 @@ func ReadIndex(r io.Reader) (Index, error) {
 			break
 		}
 
-		var chunks []Chunk
+		var blocks []Block
 		for i := 0; i < int(length); i += 0x10 {
 			var start, length uint64
 			err := read(r, binary.BigEndian, &start, &length)
@@ -57,10 +57,10 @@ func ReadIndex(r io.Reader) (Index, error) {
 				return nil, fmt.Errorf("failed to read value: %s", err)
 			}
 
-			chunks = append(chunks, Chunk{Offset: start, Length: length})
+			blocks = append(blocks, Block{Offset: start, Length: length})
 		}
 
-		index[id] = &File{Chunks: chunks, Mode: Mode(mode)}
+		index[id] = &File{Blocks: blocks, Mode: Mode(mode)}
 	}
 
 	return index, nil

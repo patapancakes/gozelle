@@ -45,7 +45,8 @@ type Manifest struct {
 	Dummy2       uint32 `json:"dummy2"`
 	Dummy3       uint32 `json:"dummy3"`
 	Checksum     uint32 `json:"checksum"`
-	Items        []Item `json:"items"`
+
+	Items []Item `json:"items"`
 }
 
 type Item struct {
@@ -55,8 +56,9 @@ type Item struct {
 	ParentIndex uint32 `json:"parentIndex"`
 	NextIndex   uint32 `json:"nextIndex"`
 	FirstIndex  uint32 `json:"firstIndex"`
-	Name        string `json:"name"`
-	Path        string `json:"path"`
+
+	Name string `json:"name"`
+	Path string `json:"path"`
 }
 
 func (i Item) IsDirectory() bool {
