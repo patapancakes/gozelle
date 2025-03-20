@@ -60,7 +60,10 @@ func (b Block) Close() error {
 		return nil
 	}
 
-	b.closer.Close()
+	err := b.closer.Close()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
