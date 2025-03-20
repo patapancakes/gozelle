@@ -24,7 +24,7 @@ import (
 	"io"
 )
 
-type Mode int
+type Mode uint64
 
 const (
 	Raw Mode = iota
@@ -39,28 +39,34 @@ func ReadIndex(r io.Reader) (Index, error) {
 	index := make(Index)
 
 	for {
-		var id, length, mode uint64
-		err := read(r, binary.BigEndian, &id, &length, &mode)
+		var f File
+		var id, length uint64
+		err := read(r, binary.BigEndian, &id, &length, &f.Mode)
 		if err != nil {
 			if !errors.Is(err, io.EOF) {
-				return index, err
+				return nil, err
 			}
 
 			break
 		}
 
-		var blocks []Block
-		for i := 0; i < int(length); i += 0x10 {
-			var start, length uint64
-			err := read(r, binary.BigEndian, &start, &length)
+		blockreader := io.LimitReader(r, int64(length))
+
+		for {
+			var b Block
+			err := read(blockreader, binary.BigEndian, &b.Offset, &b.Length)
 			if err != nil {
-				return nil, fmt.Errorf("failed to read value: %s", err)
+				if !errors.Is(err, io.EOF) {
+					return nil, fmt.Errorf("failed to read value: %s", err)
+				}
+
+				break
 			}
 
-			blocks = append(blocks, Block{Offset: start, Length: length})
+			f.Blocks = append(f.Blocks, b)
 		}
 
-		index[id] = &File{Blocks: blocks, Mode: Mode(mode)}
+		index[id] = &f
 	}
 
 	return index, nil
