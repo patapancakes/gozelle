@@ -50,6 +50,7 @@ type Manifest struct {
 }
 
 type Item struct {
+	NameOffset	uint32 `json:"nameOffset"`
 	Size        uint32 `json:"size"`
 	ID          uint32 `json:"id"`
 	Type        uint32 `json:"type"`
@@ -67,7 +68,6 @@ func (i Item) IsDirectory() bool {
 
 func ReadManifest(r io.ReadSeeker) (Manifest, error) {
 	var manifest Manifest
-
 	err := read(r, binary.LittleEndian, &manifest.Dummy1, &manifest.DepotID,
 		&manifest.DepotVersion, &manifest.NumItems, &manifest.NumFiles, &manifest.BlockSize,
 		&manifest.DirSize, &manifest.DirNameSize, &manifest.InfoCount, &manifest.CopyCount,
@@ -77,21 +77,19 @@ func ReadManifest(r io.ReadSeeker) (Manifest, error) {
 	}
 
 	for i := range manifest.NumItems {
-		_, err = r.Seek(int64(56+(i*28)), 0)
+		_, err = r.Seek(int64(56+(i*28)), io.SeekStart)
 		if err != nil {
 			return manifest, fmt.Errorf("failed to seek to item: %s", err)
 		}
 
-		var nameOffset uint32
 		var item Item
-
-		err = read(r, binary.LittleEndian, &nameOffset, &item.Size, &item.ID, &item.Type, &item.ParentIndex, &item.NextIndex, &item.FirstIndex)
+		err = read(r, binary.LittleEndian, &item.NameOffset, &item.Size, &item.ID, &item.Type, &item.ParentIndex, &item.NextIndex, &item.FirstIndex)
 		if err != nil {
 			return manifest, fmt.Errorf("failed to read value: %s", err)
 		}
 
 		// name offset but no name size? really???
-		_, err = r.Seek(int64(56+(manifest.NumItems*28)+nameOffset), 0)
+		_, err = r.Seek(int64(56+(manifest.NumItems*28)+item.NameOffset), 0)
 		if err != nil {
 			return manifest, fmt.Errorf("failed to seek to file name: %s", err)
 		}

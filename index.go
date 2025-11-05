@@ -50,11 +50,11 @@ func ReadIndex(r io.Reader) (Index, error) {
 			break
 		}
 
-		blockreader := io.LimitReader(r, int64(length))
+		br := io.LimitReader(r, int64(length))
 
 		for {
 			var b Block
-			err := read(blockreader, binary.BigEndian, &b.Offset, &b.Length)
+			err := read(br, binary.BigEndian, &b.Offset, &b.Length)
 			if err != nil {
 				if !errors.Is(err, io.EOF) {
 					return nil, fmt.Errorf("failed to read value: %s", err)
