@@ -18,7 +18,6 @@
 package gozelle
 
 import (
-	"bytes"
 	"compress/zlib"
 	"crypto/aes"
 	"crypto/cipher"
@@ -74,18 +73,12 @@ func (b *Block) Prepare(key []byte, src io.ReaderAt, mode Mode) error {
 		return nil
 	}
 
-	block := make([]byte, b.Length)
-	_, err := src.ReadAt(block, int64(b.Offset))
-	if err != nil {
-		return fmt.Errorf("failed to read data: %s", err)
-	}
-
-	b.data = bytes.NewReader(block)
+	b.data = io.NewSectionReader(src, int64(b.Offset), int64(b.Length))
 
 	// zlib buffer sizes if encrypted, not used
 	var encSize, decSize uint32
 	if mode == EncryptedCompressed {
-		err = read(b.data, binary.LittleEndian, &encSize, &decSize)
+		err := read(b.data, binary.LittleEndian, &encSize, &decSize)
 		if err != nil {
 			return fmt.Errorf("failed to read value: %s", err)
 		}
